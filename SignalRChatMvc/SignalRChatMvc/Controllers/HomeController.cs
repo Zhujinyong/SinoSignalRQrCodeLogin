@@ -34,10 +34,10 @@ namespace SignalRChatMvc.Controllers
             //return Json(new { Success = true, Id = id });
         }
 
-
+         
          
         /// <summary>
-        /// 扫码登录，测试http://localhost:55030/Home/Login  http://localhost:55030/Home/ScanQrCode?id=1f5be1fc-4226-40cc-bbda-4a121e4087f3&userid=5
+        /// 扫码登录，   测试http://localhost:55030/Home/Login  http://localhost:55030/Home/ScanQrCode?id=1f5be1fc-4226-40cc-bbda-4a121e4087f3&userid=5
         /// </summary>
         /// <param name="id">二维码Id</param>
         /// <param name="userid">用户Id（前台发token,TokenValidate过滤解析得到userid）</param>
