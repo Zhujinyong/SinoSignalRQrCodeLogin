@@ -1,0 +1,69 @@
+﻿<script src="~/Scripts/jquery-2.0.3.min.js"></script>
+<script src="~/Scripts/jquery.signalR-2.0.0.js"></script>
+<script src="~/Scripts/jquery.qrcode.min.js"></script>
+<script src="~/signalr/hubs"></script>
+
+    <center><div id="qrcode"></div></center>
+    <center><div id="status"></div></center>
+  
+    <script type="text/javascript">
+        var secs = 5; //倒计时的秒数
+        var URL;
+        var chat = $.connection.qrCodeLoginHub;
+
+        $(function () {
+
+
+            chat.client.SendMessage = qrcode_login;
+           $.connection.hub.start().done(function () {
+                $.ajax({
+                    type: "POST",
+                    url: '/Home/GetQrCode',
+                    dataType: "json",
+                    beforeSend: function () {
+                        $("#qrcode").empty();
+                    },
+                    success: function (data) {
+                        if (data.Success) {
+                            console.log(data.Id);
+                            var str = "{\"code\": \"" + data.Id + "\"}";
+                            create_qrcode(str);
+                            chat.server.addToGroup(data.Id);
+                        }
+                        else {
+                            alert("获取失败，请刷新重试！");
+                        }
+                    }
+                });
+            });
+
+
+
+
+        });
+
+        function create_qrcode(value) {
+            if (value != undefined && value != "" && value != null) {
+                $("#qrcode").qrcode({ width: 300, height: 300, text: value });
+            }
+        }
+
+        function Load(url) {
+            URL = url;
+            for (var i = secs; i >= 0; i--) {
+                window.setTimeout('doUpdate(' + i + ')', (secs - i) * 1000);
+            }
+        }
+        function doUpdate(num) {
+            $("#status").text('将在' + num + '秒后自动跳转到主页');
+            if (num == 0) { window.location = URL; }
+        }
+
+        function qrcode_login(data) {
+            $("#status").text(data.Message);
+            if (data.Success) {
+                Load(data.Url);
+            }
+        }
+    </script>
+
