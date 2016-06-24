@@ -1,64 +1,131 @@
 # 二维码登录
-用户在手机APP上登录后，通过扫描二维码，实现网页登录，先来看看效果吧：<br>
-![](https://github.com/Zhujinyong/ImageEdit/raw/master/images/overView.jpg)  
-首先html中需要先添加如下div,3个canvas分别表示主图，水印图片和水印文字画布，外面套一层遮罩层（为了方便鼠标拖动）。<br>
-~~~JavaSctipt
-  <div style="width:600px; height:450px; overflow:auto;z-index:3;position:absolute;">
-                <div>
-                    <canvas id="canvas" width="400" height="400" style="border:2px solid gray;position:absolute;"></canvas>
-                </div>
-                <div  id='imageCover' style="width:100px; height:100px;position:absolute;cursor:pointer;display:none;z-index:4;">
-                    <canvas id="watermarkImageCanvas"   width="100" height="100" style="position:absolute;"></canvas>
-                </div>
-                <div  id='textCover' style="width:100px; height:30px;position:absolute;cursor:pointer;z-index:5;display:none">
-                    <canvas id="watermarkTextCanvas"   width="100" height="30" style="position:absolute;"></canvas>
-                </div>
-            </div>
-~~~
-div添加好了，接下来就是初始化和对图片的操作：<br>
- 1.初始化操作，主图片画布，水印图片遮罩层，水印图片画布，水印文本遮罩层，水印文本画布<br>
+一.应用场景
+用户在手机APP上登录后，通过扫描登录网页二维码，实现登录：<br>
+
+二.所用技术
+SignalR+EF+MVC：<br>
+
+三.先来看看效果吧：<br>
+第一步：请求网页，生成一个二维码：http://localhost:55030/Home/Login，生成ID，在控制台输出：
+![](https://github.com/Zhujinyong/SignalRQrCodeLogin/raw/master/SignalRChatMvc/SignalRChatMvc/Images/qrCode.jpg)  
+
+第二步：用户扫码后程序中访问：http://localhost:55030/Home/ScanQrCode?id=1f5be1fc-4226-40cc-bbda-4a121e4087f3&userid=5，这里的id是上面生成的二维码，登录成功后跳转到其他页面：
+![](https://github.com/Zhujinyong/SignalRQrCodeLogin/raw/master/SignalRChatMvc/SignalRChatMvc/Images/jump.jpg)  
+
+四.代码<br>
+1.转换器QrCodeLoginHub包含组播，广播，绑定等操作：<br>
 ~~~C#
-   sinoImageEditModule.init({
-        canvasId:'canvas',
-        imageCoverId:'imageCover',
-           imageCanvasId:'watermarkImageCanvas',
-        textCoverId:'textCover',
-        textCanvasId:'watermarkTextCanvas',
-        });
+ public class QrCodeLoginHub : Hub
+    {
+        /// <summary>
+        /// 加到不同分组
+        /// </summary>
+        /// <param name="groupId">分组Id</param>
+        public void AddToGroup(string groupId)
+        {
+            this.Groups.Add(Context.ConnectionId, groupId);
+        }
+
+        /// <summary>
+        /// 广播，向所有客户端发消息
+        /// </summary>
+        /// <param name="signalRMessage">消息模型</param>
+        public void SendToAll(SignalRModel signalRMessage)
+        {
+            Clients.All.sendMessage(signalRMessage);
+        }
+
+
+        /// <summary>
+        /// 组播，向指定分组下的客户端发消息
+        /// </summary>
+        /// <param name="groupId">分组Id</param>
+        /// <param name="signalRMessage">消息模型</param>
+        public void SendToGroup(string groupId, SignalRModel signalRMessage)
+        {
+            var hubContext = GlobalHost.ConnectionManager.GetHubContext<QrCodeLoginHub>();
+            hubContext.Clients.Group(groupId).SendMessage(signalRMessage);
+        }
+
+
+
+        /// <summary>
+        /// 向指定客户端发送消息，考虑到二维码登录，
+        /// </summary>
+        /// <param name="signalRMessage"></param>
+        public static void Send(SignalRModel signalRMessage)
+        {
+            var hubContext = GlobalHost.ConnectionManager.GetHubContext<QrCodeLoginHub>();
+            hubContext.Clients.Group(signalRMessage.Id).SendMessage(signalRMessage);
+        }
+    }
 ~~~
 
-2.裁剪，鼠标选择一块矩形区域裁剪<br>
+2.前端调用代码：<br>
 ~~~C#
-  sinoImageEditModule.imageCut();
-~~~
+ <center><div id="qrcode"></div></center>
+    <center><div id="status"></div></center>
+  
+    <script type="text/javascript">
+        var secs = 5; //倒计时的秒数
+        var URL;
+        var chat = $.connection.qrCodeLoginHub;
 
-3.旋转，设置旋转角度（正数顺时针旋转，负数逆时针旋转）<br>
-~~~C#
-  sinoImageEditModule.imageRotation(document.getElementById('inputRotation').value);
-~~~
+        $(function () {
 
-4.缩放，根据宽和高缩放图片<br>
-~~~C#
-  sinoImageEditModule.setSize(500,300);
-~~~
 
-5.水印图片，可以鼠标移动图片，设置图片透明度，图片路径，大小等<br>
-~~~C#
-     sinoImageEditModule.imageWatermark(src,opcity,left,top,width,height,callback);
-~~~
-
-6.水印文字，可以鼠标移动文字，设置文字内容，透明度，大小等<br>
-~~~C#
-     sinoImageEditModule.textWatermark(opcity,txt,font,style,left,top,width,height,textLeft,TextTop,callback);
-~~~
-
-7.保存到服务端,POST图片base64值到远程服务器，CORS跨域保存
-~~~C#
-     sinoImageEditModule.saveImage('http://localhost:8055/Home/SaveImage',function(result)
-            {
-                if(result.State==1)
-                    alert('保存成功,文件名：'+result.FileName);
-                else
-                    alert('保存失败');
+            chat.client.SendMessage = qrcode_login;
+           $.connection.hub.start().done(function () {
+                $.ajax({
+                    type: "POST",
+                    url: '/Home/GetQrCode',
+                    dataType: "json",
+                    beforeSend: function () {
+                        $("#qrcode").empty();
+                    },
+                    success: function (data) {
+                        if (data.Success) {
+                            console.log(data.Id);
+                            var str = "{\"code\": \"" + data.Id + "\"}";
+                            create_qrcode(str);
+                            chat.server.addToGroup(data.Id);
+                        }
+                        else {
+                            alert("获取失败，请刷新重试！");
+                        }
+                    }
+                });
             });
+
+
+
+
+        });
+
+        function create_qrcode(value) {
+            if (value != undefined && value != "" && value != null) {
+                $("#qrcode").qrcode({ width: 300, height: 300, text: value });
+            }
+        }
+
+        function Load(url) {
+            URL = url;
+            for (var i = secs; i >= 0; i--) {
+                window.setTimeout('doUpdate(' + i + ')', (secs - i) * 1000);
+            }
+        }
+        function doUpdate(num) {
+            $("#status").text('将在' + num + '秒后自动跳转到主页');
+            if (num == 0) { window.location = URL; }
+        }
+
+        function qrcode_login(data) {
+            $("#status").text(data.Message);
+            if (data.Success) {
+                Load(data.Url);
+            }
+        }
+    </script>
 ~~~
+
+
