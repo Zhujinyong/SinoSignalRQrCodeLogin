@@ -35,7 +35,7 @@ namespace SignalRChatMvc.Controllers
         }
 
 
-
+         
         /// <summary>
         /// 扫码登录，测试http://localhost:55030/Home/Login  http://localhost:55030/Home/ScanQrCode?id=1f5be1fc-4226-40cc-bbda-4a121e4087f3&userid=5
         /// </summary>
