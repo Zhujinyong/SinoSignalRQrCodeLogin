@@ -19,7 +19,7 @@
 ##### 3.使用的技术<br>
 　　SignalR+EF+MVC<br>
 
-#### 三.先来看看效果吧：<br>
+#### 三.先来看看效果吧<br>
 　　第一步：请求网页，生成一个二维码：http://localhost:55030/Home/Login，生成ID，在控制台输出：
 ![](https://github.com/Zhujinyong/SignalRQrCodeLogin/raw/master/SignalRChatMvc/SignalRChatMvc/Images/qrCode.jpg)  
 
